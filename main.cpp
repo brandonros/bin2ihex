@@ -16,14 +16,14 @@ enum FileTypeEnum { NoFile, BinFile, HexFile };
 
 // The following type just lets me access high and low bytes of the 16-bit address.
 union AddressBytes {
-    uint8_t Bytes[2];
-    uint16_t Full;
+    uint8_t Bytes[4];
+    uint32_t Full;
 };
 
-int HandleBinFile(std::ifstream &InputFile, std::ofstream &OutputFile, int dataSize) {
+int HandleBinFile(std::ifstream &InputFile, std::ofstream &OutputFile, int dataSize, int startAddress) {
     char inputByte;
     AddressBytes startingAddress;
-    startingAddress.Full = 0;
+    startingAddress.Full = startAddress;
     unsigned char checkSum; // Two's complement of sum of all bytes on a line.
     while (InputFile.read(&inputByte,1)) {
         // Start the checksum with everything but the bytes we're writing.
@@ -100,6 +100,7 @@ void PrintHelp () {
     "                 (Default: input with new extension)\n"
     "-s:              Sets the data size per line. (for bin->hex)\n"
     "                 (Between 1 and 255. Default: 1 byte.)\n"
+    "-a:              Sets the start address.\n"
     "-h or --help:    Gives you this text.\n"
     "-v or --version: Prints the version.\n" << std::flush;
 }
@@ -112,6 +113,7 @@ int main (int argc, char ** argv) {
     FileTypeEnum fileType = NoFile;
     std::string outputFileName;
     int dataSize = 1;
+    int startAddress = 0;
 
     std::cout << "** bin2ihex **" << std::endl;
 
@@ -168,6 +170,11 @@ int main (int argc, char ** argv) {
                 return 1;
             }
         }
+        else if (token == "-a") {
+            ++i;
+            startAddress = strtoul(argv[i], NULL,16);
+            printf("startAddress = %08x\n", startAddress);
+        }
         else {
             if (fullFileName.empty()) {
                 fullFileName = argv[i];
@@ -222,11 +229,11 @@ int main (int argc, char ** argv) {
 
     // Convert the file
     int returnCode;
-    if (fileType == BinFile) returnCode = HandleBinFile(InputFile, OutputFile, dataSize);
+    if (fileType == BinFile) returnCode = HandleBinFile(InputFile, OutputFile, dataSize, startAddress);
     else returnCode = HandleHexFile(InputFile, OutputFile);
     if (returnCode)
         std::cout << "Successfully converted " << fileName << " to " << outputFileName << "." << std::endl;
-    else 
+    else
         std::cout << "Conversion of " << fileName << " failed." << std::endl;
 
     return 0;
